@@ -28,7 +28,6 @@ from .commands.cmake import CMAKE_INSTALL_MANIFEST_FILENAME
 from .commands.cmake import CMakeIOBufferProtocol
 from .commands.cmake import CMakeMakeIOBufferProtocol
 from .commands.cmake import get_installed_files
-from .commands.make import MAKE_EXEC
 
 from .utils import copyfiles
 from .utils import loadenv
@@ -264,7 +263,7 @@ def create_cmake_build_job(context, package, package_path, dependencies, force_c
     require_command('cmake', CMAKE_EXEC)
 
     # CMake command
-    makefile_path = os.path.join(build_space, 'Makefile')
+    makefile_path = os.path.join(build_space, 'CMakeCache.txt')
     if not os.path.isfile(makefile_path) or force_cmake:
         stages.append(CommandStage(
             'cmake',
@@ -277,12 +276,13 @@ def create_cmake_build_job(context, package, package_path, dependencies, force_c
             logger_factory=CMakeIOBufferProtocol.factory_factory(pkg_dir)
         ))
     else:
-        stages.append(CommandStage(
-            'check',
-            [MAKE_EXEC, 'cmake_check_build_system'],
-            cwd=build_space,
-            logger_factory=CMakeIOBufferProtocol.factory_factory(pkg_dir)
-        ))
+        # stages.append(CommandStage(
+        #     'check',
+        #     [CMAKE_EXEC, '-E', '--check-build-system'],
+        #     cwd=build_space,
+        #     logger_factory=CMakeIOBufferProtocol.factory_factory(pkg_dir)
+        # ))
+        pass
 
     # Pre-clean command
     if pre_clean:
@@ -290,16 +290,14 @@ def create_cmake_build_job(context, package, package_path, dependencies, force_c
             context.make_args + context.catkin_make_args)
         stages.append(CommandStage(
             'preclean',
-            [MAKE_EXEC, 'clean'] + make_args,
+            [CMAKE_EXEC, '--build', '--use-stderr', '.', '--target', 'clean', '--'] + make_args,
             cwd=build_space,
         ))
 
-    require_command('make', MAKE_EXEC)
-
     # Make command
     stages.append(CommandStage(
-        'make',
-        [MAKE_EXEC] + handle_make_arguments(context.make_args),
+        'build',
+        [CMAKE_EXEC, '--build', '--use-stderr', '.', '--'] + handle_make_arguments(context.make_args),
         cwd=build_space,
         logger_factory=CMakeMakeIOBufferProtocol.factory
     ))
@@ -307,7 +305,7 @@ def create_cmake_build_job(context, package, package_path, dependencies, force_c
     # Make install command (always run on plain cmake)
     stages.append(CommandStage(
         'install',
-        [MAKE_EXEC, 'install'],
+        [CMAKE_EXEC, '--build', '--use-stderr', '.', '--target install'],
         cwd=build_space,
         logger_factory=CMakeMakeIOBufferProtocol.factory,
         locked_resource='installspace'

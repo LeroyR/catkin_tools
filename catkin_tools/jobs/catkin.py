@@ -32,7 +32,6 @@ from .commands.cmake import CMAKE_EXEC
 from .commands.cmake import CMakeIOBufferProtocol
 from .commands.cmake import CMakeMakeIOBufferProtocol
 from .commands.cmake import get_installed_files
-from .commands.make import MAKE_EXEC
 
 from .utils import copyfiles
 from .utils import loadenv
@@ -422,7 +421,9 @@ def create_catkin_build_job(context, package, package_path, dependencies, force_
 
     # Only run CMake if the Makefile doesn't exist or if --force-cmake is given
     # TODO: This would need to be different with `cmake --build`
-    makefile_path = os.path.join(build_space, 'Makefile')
+    makefile_path = os.path.join(build_space, 'CMakeCache.txt')
+
+    require_command('cmake', CMAKE_EXEC)
 
     if not os.path.isfile(makefile_path) or force_cmake:
 
@@ -432,8 +433,6 @@ def create_catkin_build_job(context, package, package_path, dependencies, force_
             ctr_nuke,
             prefix=context.package_dest_path(package)
         ))
-
-        require_command('cmake', CMAKE_EXEC)
 
         # CMake command
         stages.append(CommandStage(
@@ -451,13 +450,14 @@ def create_catkin_build_job(context, package, package_path, dependencies, force_
         ))
     else:
         # Check buildsystem command
-        stages.append(CommandStage(
-            'check',
-            [MAKE_EXEC, 'cmake_check_build_system'],
-            cwd=build_space,
-            logger_factory=CMakeIOBufferProtocol.factory_factory(pkg_dir),
-            occupy_job=True
-        ))
+        # stages.append(CommandStage(
+        #     'check',
+        #     [CMAKE_EXEC, '-E', '--check-build-system'],
+        #     cwd=build_space,
+        #     logger_factory=CMakeIOBufferProtocol.factory_factory(pkg_dir),
+        #     occupy_job=True
+        # ))
+        pass
 
     # Filter make arguments
     make_args = handle_make_arguments(
@@ -472,16 +472,14 @@ def create_catkin_build_job(context, package, package_path, dependencies, force_
         # TODO: Remove target args from `make_args`
         stages.append(CommandStage(
             'preclean',
-            [MAKE_EXEC, 'clean'] + make_args,
+            [CMAKE_EXEC, '--build', '--use-stderr', '.', '--target', 'clean', '--'] + make_args,
             cwd=build_space,
         ))
 
-    require_command('make', MAKE_EXEC)
-
     # Make command
     stages.append(CommandStage(
-        'make',
-        [MAKE_EXEC] + make_args,
+        'build',
+        [CMAKE_EXEC, '--build', '--use-stderr', '.', '--'] + make_args,
         cwd=build_space,
         env_overrides=env_overrides,
         logger_factory=CMakeMakeIOBufferProtocol.factory
@@ -506,7 +504,7 @@ def create_catkin_build_job(context, package, package_path, dependencies, force_
     if context.install:
         stages.append(CommandStage(
             'install',
-            [MAKE_EXEC, 'install'],
+            [CMAKE_EXEC, '--build', '--use-stderr', '.', '--target', 'install'],
             cwd=build_space,
             logger_factory=CMakeMakeIOBufferProtocol.factory,
             locked_resource=None if context.isolate_install else 'installspace'
@@ -556,7 +554,7 @@ def create_catkin_clean_job(
             # Remove build targets from devel space
             stages.append(CommandStage(
                 'clean',
-                [MAKE_EXEC, 'clean'],
+                [CMAKE_EXEC, '--build', '--use-stderr', '.', '--target', 'clean', '--'],
                 cwd=build_space,
             ))
         elif context.link_devel:
