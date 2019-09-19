@@ -15,6 +15,7 @@ install_requires = [
     'setuptools',
     'PyYAML',
     'osrf-pycommon > 0.1.1',
+    'trollius'
 ]
 if sys.version_info[0] == 2 and sys.version_info[1] <= 6:
     install_requires.append('argparse')
@@ -98,18 +99,25 @@ To enable tab completion, add the following to your '~/.bashrc':
                         'catkin_tools-completion.bash')))
 
 parser = argparse.ArgumentParser(add_help=False)
-prefix_group = parser.add_mutually_exclusive_group()
-prefix_group.add_argument('--user', '--home', action='store_true')
-prefix_group.add_argument('--prefix', default=None)
+parser.add_argument('--user', '--home', action='store_true')
+parser.add_argument('--prefix', default=None)
 
 opts, _ = parser.parse_known_args(sys.argv)
-userbase = site.getuserbase() if opts.user else None
-prefix = userbase or opts.prefix or sys.prefix
+if opts.user and not (opts.prefix == None or opts.prefix == ""):
+    raise Exception("error: argument --prefix: must be unspecified or empty if given with argument --user/--home")
+
+prefix = None
+if opts.user:
+    prefix = site.getuserbase()
+elif opts.prefix != None:
+    prefix = opts.prefix
+else:
+    prefix = sys.prefix
 
 setup(
     name='catkin_tools',
     version='0.4.5',
-    packages=find_packages(exclude=['tests', 'docs']),
+    packages=find_packages(exclude=['tests*', 'docs']),
     package_data={
         'catkin_tools': [
             'notifications/resources/linux/catkin_icon.png',
@@ -154,6 +162,13 @@ setup(
         'catkin_tools.jobs': [
             'catkin = catkin_tools.jobs.catkin:description',
             'cmake = catkin_tools.jobs.cmake:description',
+        ],
+        'catkin_tools.spaces': [
+            'build = catkin_tools.spaces.build:description',
+            'devel = catkin_tools.spaces.devel:description',
+            'install = catkin_tools.spaces.install:description',
+            'log = catkin_tools.spaces.log:description',
+            'source = catkin_tools.spaces.source:description',
         ],
     },
     cmdclass={'install': PermissiveInstall},

@@ -72,7 +72,7 @@ Build Product Layout Section
 - **Devel Space Layout** -- The organization of the **devel space**.
 
   - *Linked* -- Write products from each package into independent isolated FHS trees, and symbolically link them into a merged FHS tree.
-    For more details, see `Linked Devel Space <advanced/linked_develspace>`_.
+    For more details, see :doc:`Linked Devel Space <advanced/linked_develspace>`.
   - *Merged* -- Write products from all packages to a single FHS tree. This is most similar to the behavior of ``catkin_make``.
   - *Isolated* -- Write products from each package into independent isolated FHS trees. this is most similar to the behavior of ``catkin_make_isolated``.
 
@@ -235,7 +235,6 @@ Sourcing these setup scripts adds this workspace and any "underlaid" workspaces 
 
 .. [1] GNU/Linux Only
 .. [2] Mac OS X Only
-.. [3] Windows Only
 .. [4] Only in versions of ``catkin`` <= ``0.7.0`` (ROS Kinetic), see the changelog_
 
 
